@@ -1,0 +1,3 @@
+[31msyntax error at end of input
+LINE 1: CREATE TABLE test(id INTEGER,name VARCHAR(50)
+                                                     ^[0m
