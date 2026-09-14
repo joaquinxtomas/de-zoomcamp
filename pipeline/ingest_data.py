@@ -29,6 +29,12 @@ parse_dates = [
     "tpep_dropoff_datetime"
 ]
 
+dtype_zone = {
+    "LocationID": "Int64",
+    "Borough":"string",
+    "Zone":"string",
+    "service_zone":"string"
+}
 
 @click.command()
 @click.option('--pg-user', default='root', help='PostgreSQL user')
@@ -36,22 +42,27 @@ parse_dates = [
 @click.option('--pg-host', default='localhost', help='PostgreSQL host')
 @click.option('--pg-port', default=5432, type=int, help='PostgreSQL port')
 @click.option('--pg-db', default='ny_taxi', help='PostgreSQL database name')
-@click.option('--target-table', default='yellow_taxi_data', help='Target table name')
+@click.option('--yellow-table', default='yellow_taxi_data', help='yellow table name')
+@click.option('--zones-table', default='zones-table', help='zones table name')
 
 
-def run(pg_user, pg_pass, pg_host, pg_port, pg_db, target_table):
+def run(pg_user, pg_pass, pg_host, pg_port, pg_db, yellow_table, zones_table):
 
     engine = create_engine(f'postgresql+psycopg://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}')
 
-    first = True
+    ingest_yellow_tripdata(engine, yellow_table)
+    ingest_zones(engine, zones_table)
 
+
+def ingest_yellow_tripdata(engine, target_table):
+    first=True
     df_iter= pd.read_csv(
-        prefix + 'yellow_tripdata_2021-01.csv',
-        dtype=dtype,
-        parse_dates=parse_dates,
-        iterator=True,
-        chunksize=100000
-    )
+            prefix + 'yellow_tripdata_2021-01.csv',
+            dtype=dtype,
+            parse_dates=parse_dates,
+            iterator=True,
+            chunksize=100000
+        )
 
     for df_chunk in tqdm(df_iter):
         if first:
@@ -60,6 +71,7 @@ def run(pg_user, pg_pass, pg_host, pg_port, pg_db, target_table):
                 con=engine,
                 if_exists='replace'
             )
+
             first=False
             print("table created")
 
@@ -70,6 +82,35 @@ def run(pg_user, pg_pass, pg_host, pg_port, pg_db, target_table):
         )
 
         print('Inserted: ', len(df_chunk))
+
+def ingest_zones(engine, target_table):
+    first = True
+
+    df_iter_zones = pd.read_csv(
+        prefix + 'taxi_zone_lookup.csv',
+        dtype= dtype_zone,
+        iterator=True,
+        chunksize=100000
+    )
+
+    for df_chunk in tqdm(df_iter_zones):
+        if first:
+            df_chunk.head(0).to_sql(
+                name=target_table,
+                con=engine,
+                if_exists='replace'
+            )
+
+            first=False
+            print("table created")
+
+        df_chunk.to_sql(
+            name='zones',
+            con=engine,
+            if_exists='append'
+        )
+
+
 
 if __name__ =='__main__':
     run()
