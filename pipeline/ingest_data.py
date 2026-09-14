@@ -42,8 +42,8 @@ dtype_zone = {
 @click.option('--pg-host', default='localhost', help='PostgreSQL host')
 @click.option('--pg-port', default=5432, type=int, help='PostgreSQL port')
 @click.option('--pg-db', default='ny_taxi', help='PostgreSQL database name')
-@click.option('--yellow-table', default='yellow_taxi_data', help='yellow table name')
-@click.option('--zones-table', default='zones-table', help='zones table name')
+@click.option('--yellow-table', default='yellow_taxi_trips', help='yellow table name')
+@click.option('--zones-table', default='zones', help='zones table name')
 
 
 def run(pg_user, pg_pass, pg_host, pg_port, pg_db, yellow_table, zones_table):
@@ -76,7 +76,7 @@ def ingest_yellow_tripdata(engine, target_table):
             print("table created")
 
         df_chunk.to_sql(
-            name='yellow_taxi_data',
+            name=target_table,
             con=engine,
             if_exists='append'
         )
@@ -105,7 +105,7 @@ def ingest_zones(engine, target_table):
             print("table created")
 
         df_chunk.to_sql(
-            name='zones',
+            name=target_table,
             con=engine,
             if_exists='append'
         )
